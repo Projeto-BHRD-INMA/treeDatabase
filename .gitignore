@@ -1,0 +1,15 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+#ignore extensions
+*.zip
+*.xlsx
+*.docx
+
+
+#ignore folders
+results/gbif/
+docs/
+SIG/

@@ -1,2 +1,2 @@
 # treeDatabase
-Download and manipulation os tree species list and database
+Download and manipulation of tree species list and database
