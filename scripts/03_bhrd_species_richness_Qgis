@@ -1,0 +1,29 @@
+
+################################################################################
+###                                                                          ###
+###               CALCULATE SPATIAL SPECIES RICHNESS in QGIS                 ###
+###                                                                          ###
+###                                                                          ###
+###                Created by Danielle de O. Moreira                         ###
+###                         March 2022                                       ###
+###                                                                          ###
+################################################################################
+
+#Files are in folder /01_INMA_BHRD
+
+#Load file treeDatabase/SIG/spp_gbif_bhrd_clean_albers.shp
+
+#Create a grid shapefile
+> Vector > Research tools > Create grid
+Grid type: rectangle
+Grid extent: Calculate from layer ./GIS/bhrd_albers_dissolv.shp
+Horizontal and vertical space: type distance
+RUN
+
+#Count points in each cell of a grid
+>Vector > Analysis tool > Count points in a polygon
+Polygons: grid_bhrd_5km_albers.shp
+Points: spp_gbif_bhrd_clean_albers
+Class: species
+Count field name: NUMSPECIES >> for richness map, this is the field we choose
+RUN
