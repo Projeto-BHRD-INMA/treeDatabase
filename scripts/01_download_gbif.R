@@ -33,12 +33,11 @@ email <- "XXX@gmail.com" # your email
 
 #############################################################################
 
-oc <- read.csv("/home/danimoreira/01_INMA_BHRD/bancoDados/listas/lista_especies_BHRD_correta.csv", sep = ';')
+oc <- read.csv("./data/lista_especies_BHRD_correta.csv", sep = ';')
 names(oc)
 
 gbif_taxon_keys <-
   oc %>% 
-  #read.csv("./data/registros/spp_Gualaxo/1_spp_gualaxo.csv", sep = ';') %>% #For an file with a list of spp names
   pull(species) %>% #Specify the column from the list
   taxize::get_gbifid_(method="backbone") %>% # match names to the GBIF backbone to get taxonkeys
   imap(~ .x %>% mutate(original_sciname = .y)) %>% # add original name back into data.frame
@@ -61,9 +60,6 @@ occ_download(
   pred("hasGeospatialIssue", FALSE),
   pred_gte("year", 1950),
   format = "SIMPLE_CSV",
-  #pred("geometry","POLYGON((-43.86 -17.57, -43.88 -21.49, -39.79 -19.86, -39.46 -17.98, -43.86
-  #     -17.57))"),
-  #pred("continent", "South America"),
   user=user,pwd=pwd,email=email
 )
 
