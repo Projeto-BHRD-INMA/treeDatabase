@@ -149,11 +149,23 @@ write.csv(spp.shp.bhrd, "./results/species_gbif_bhrd_clean.csv")
 
 
 # CORRECT SPECIFIC POINTS FALLING IN THE WRONG PLACE  --------------------------
-# Points Falling out from Reserva Natural da Vale, Linhares, ES
+# Load csv data
+dat_bhrd <- read.csv("./results/species_gbif_bhrd_clean.csv", 
+                     header = T, sep=",", dec=".",
+                     encoding="utf-8")
+names(dat_bhrd)
 
+# Delete records for Reserva Biológica de Sooretama, Reserva Biológica de Comboios, Pontal do Ipiranga. Coordinates are wrong and these places are not inside our study area.
+dat_bhrd1 <- dat_bhrd %>%
+  filter(!str_detect(locality, 
+                    regex("Sooretama|Comboios|Pontal do Ipiranga", 
+                          ignore_case = TRUE))
+  )
+
+# Correct points Falling out from Reserva Natural da Vale, Linhares, ES
 # Create a polygon representing the Reserva
-y_coord <- c(-19.21564, -19.22470, -19.26003, -19.27045, -19.21564)
-x_coord <- c(-40.02190, -39.91275, -39.90799, -40.02280, -40.02190)
+v_y_coord <- c(-19.21564, -19.22470, -19.26003, -19.27045, -19.21564)
+v_x_coord <- c(-40.02190, -39.91275, -39.90799, -40.02280, -40.02190)
 
 # -40.02190,-19.21564
 # -39.91275,-19.22470
@@ -161,99 +173,184 @@ x_coord <- c(-40.02190, -39.91275, -39.90799, -40.02280, -40.02190)
 # -40.02280,-19.27045
 
 ## closing the polygon
-x_coord[length(x_coord) + 1] <- x_coord[1]
-y_coord[length(y_coord) + 1] <- y_coord[1]
+v_x_coord[length(v_x_coord) + 1] <- v_x_coord[1]
+v_y_coord[length(v_y_coord) + 1] <- v_y_coord[1]
 
 ## construct sf POLYGON for the Reserva Natural Vale
-sf_poly <- sf::st_sf( geometry = sf::st_sfc(sf::st_polygon(x = list(matrix(c(x_coord, y_coord), ncol = 2)))) )
+v_sf_poly <- sf::st_sf( geometry = sf::st_sfc(sf::st_polygon(x = list(matrix(c(v_x_coord, v_y_coord), ncol = 2)))) )
 
 # Plot to a map
-plot(sf_poly)
+plot(v_sf_poly)
 plot(bhrd, add = TRUE)
 points(spp.shp.bhrd$decimalLongitude, spp.shp.bhrd$decimalLatitude, col = "red", cex = .3)
 
 # construct sf points. When do it, columns for "lon" and "lat" are replaced to "geometry".
-# Load csv data
-dat_bhrd <- read.csv("./results/species_gbif_bhrd_clean.csv", 
-                header = T, sep=",", dec=".",
-                encoding="utf-8")
-names(dat_bhrd)
-
 # Rename column where names is "decimalLongitude.1" and "decimalLatitude.1"
-names(dat_bhrd)[names(dat_bhrd) == "decimalLongitude.1"] <- "lon"
-names(dat_bhrd)[names(dat_bhrd) == "decimalLatitude.1"] <- "lat"
+names(dat_bhrd1)[names(dat_bhrd1) == "decimalLongitude.1"] <- "lon"
+names(dat_bhrd1)[names(dat_bhrd1) == "decimalLatitude.1"] <- "lat"
 
-dat_bhrd <- dat_bhrd[-c(1)] # exclude column X
-names(dat_bhrd)
+dat_bhrd1 <- dat_bhrd1[-c(1, 19)] # exclude column X and optional
+names(dat_bhrd1)
 
-# Create sf points
-sf_point <- sf::st_as_sf(dat_bhrd, coords = c("lon", "lat"))
-names(sf_point)
+# Create sf points for the original BHRD table
+sf_point_or <- sf::st_as_sf(dat_bhrd1, coords = c("lon", "lat"))
+names(sf_point_or)
 
 # Select records designed as Reserva Natural Vale, with and without coordinates errors
-sf_point2 <- sf_point %>%
+v_sf_point <- sf_point_or %>%
   filter(str_detect(locality, 
-                    regex("Reserva Natural Vale|Reserva Florestal da CVRD|Reserva Natural da Vale|Reserva Florestal CVRD", 
+                    regex("Reserva Natural Vale|Reserva Natural de CVRD|Reserva Florestal da CVRD|Reserva Floresta da CVRD|Reserva Natural da Vale|Reserva Florestal CVRD|Reserva Florestal de CVRD|Reserva Natural de CVRD|Reserva Florestal do CVRD|Reserva da Vale|Reserva da CVRD|Reserva Natural da CVRD|Forest Reserve Companhia Vale do Rio Doce|Res. Fl. da CVRD|Res. Fl. CVRD|Reserva Florestal de Linhares|Reserva Florestal do Linhares|Reserva Florestal Linhares|Reserva F. Linhares|Reserva Florestal da Cia. Vale|Res. Flor. Linhares. CVRD|Reserva Florestal Vale do Rio Doce|Reserva da Companhia Vale do Rio Doce|Reserva Floresta da CVRD|Reserva Floresta da C.V.R.D.|Reserva Florestal, C.V.R.D.|Reserva Florestal, CVRD", 
                           ignore_case = TRUE))
   )
 
 # Records that fall within the polygon
-sf_point_vale <- sf::st_intersection(sf_point, sf_poly)
+sf_point_vale <- sf::st_intersection(v_sf_point, v_sf_poly)
 
-# Exclude records that fall within the polygon from the sf_point2 dataframe
-sf_point3 <- sf_point2 %>%
-  filter(!sf_point2$gbifID %in% sf_point_vale$gbifID)
+# Exclude records that fall within the polygon from the v_sf_point dataframe. I will have a df with wrong coordinates records for Reserva da Vale only.
+v_sf_point2 <- v_sf_point %>%
+  filter(!v_sf_point$gbifID %in% sf_point_vale$gbifID)
 
-plot(sf_poly)
+plot(v_sf_poly)
 plot(bhrd, add = TRUE)
-points(sf_point3$decimalLongitude, sf_point3$decimalLatitude, col = "red", cex = .5)
+points(v_sf_point2$decimalLongitude, v_sf_point2$decimalLatitude, col = "red", cex = .5)
 # No points inside the rectangle. Correct
 
 # Fix coordinates 
 # Duplicate data
-sf_point4 <- sf_point3
-names(sf_point4)
+v_sf_point3 <- v_sf_point2
+names(v_sf_point3)
 
-# Design correct coordinates for Reserva Natural Vale
+# Designate correct coordinates for Reserva Natural Vale
 #-39.95583,-19.23365 lon/lat
-sf_point4$decimalLongitude[1:448] <- -39.95583
-sf_point4$decimalLatitude[1:448] <- -19.23365
+v_sf_point3$decimalLongitude[1:747] <- -39.95583
+v_sf_point3$decimalLatitude[1:747] <- -19.23365
 
-plot(sf_poly)
+plot(v_sf_poly)
 plot(bhrd, add = TRUE)
-points(sf_point4$decimalLongitude, sf_point4$decimalLatitude, col = "red", cex = .5)
+points(v_sf_point3$decimalLongitude, v_sf_point3$decimalLatitude, col = "red", cex = .5)
 
-# Join the new corrected dataframe with the total species records
-names(sf_point) # complete table
-names(sf_point4) # Table with records from Reserva Vale. Names of both table are the same
-total_join <- rbind(sf_point4, sf_point) #join
 
-# To remove duplicate records (by GBIF ID)
-final_table <- total_join[!duplicated(total_join$gbifID), ]
+# Exclude records from sf_point_or that are in the v_sf_point3 df to not generate duplicates records
+v_sf_point_exc <- sf_point_or %>%
+  filter(!sf_point_or$gbifID %in% v_sf_point3$gbifID)
 
-#Comapare both tables
-nrow(sf_point)
-nrow(final_table)
+# Join dataframes
+names(v_sf_point_exc)
+names(v_sf_point3) # Table with coordinates corrected. Names of both table are the same
+v_total_join <- rbind(v_sf_point_exc, v_sf_point3) #join
+
+#Comapare original and final tables. Same number of rows
+nrow(sf_point_or)
+nrow(v_total_join)
 
 plot(bhrd)
-points(final_table$decimalLongitude, final_table$decimalLatitude, col = "red", cex = .5)
+points(v_total_join$decimalLongitude, v_total_join$decimalLatitude, col = "red", cex = .5)
 
-plot(sf_poly)
+plot(v_sf_poly)
 plot(bhrd, add = TRUE)
-points(final_table$decimalLongitude, final_table$decimalLatitude, col = "red", cex = .5)
+points(v_total_join$decimalLongitude, v_total_join$decimalLatitude, col = "red", cex = .5)
 
 
-# Save shp points of occurrences 
-# Transform sf to SpatialPolygonsDataFrame
-final_shp <- as(final_table, "Spatial")
+
+####
+# Points Falling out from Parque Estadual do Rio Doce (PERD), MG.
+
+# Create a polygon representing the PERD
+d_y_coord <- c(-19.49395, -19.48375, -19.82261, -19.81022, -19.49395)
+d_x_coord <- c(-42.69826, -42.45705, -42.43373, -42.68587, -42.69826)
+
+# -42.69826,-19.49395
+# -42.45705,-19.48375
+# -42.43373,-19.82261
+# -42.68587,-19.81022
+
+## closing the polygon
+d_x_coord[length(d_x_coord) + 1] <- d_x_coord[1]
+d_y_coord[length(d_y_coord) + 1] <- d_y_coord[1]
+
+## construct sf POLYGON for the PERD
+d_sf_poly <- sf::st_sf(geometry = sf::st_sfc(sf::st_polygon(x = list(matrix(c(d_x_coord, d_y_coord), ncol = 2)))) )
+
+# Plot to a map
+plot(bhrd)
+points(v_total_join$decimalLongitude, v_total_join$decimalLatitude, col = "red", cex = .3)
+plot(d_sf_poly, add = TRUE)
+
+# Select records designed as PERD, with and without coordinates errors
+d_sf_point <- v_total_join %>%
+  filter(str_detect(locality, 
+                    regex("Parque Estadual do Rio Doce|Parque Estadual Rio Doce", 
+                          ignore_case = TRUE)) |
+           str_detect(locality, 
+                      regex("PERD", 
+                            ignore_case = FALSE))
+  )
+
+# Records that fall within the polygon
+sf_point_perd <- sf::st_intersection(d_sf_point, d_sf_poly)
+
+# Exclude records that fall within the polygon from the d_sf_point dataframe
+d_sf_point2 <- d_sf_point %>%
+  filter(!d_sf_point$gbifID %in% sf_point_perd$gbifID)
+
+plot(d_sf_poly)
+plot(bhrd, add = TRUE)
+points(d_sf_point2$decimalLongitude, d_sf_point2$decimalLatitude, col = "red", cex = .5)
+# No points inside the rectangle. Correct
+
+# Fix coordinates 
+# Duplicate data
+d_sf_point3 <- d_sf_point2
+names(d_sf_point3)
+
+# Design correct coordinates for PERD
+#-42.54716,-19.66219 lon/lat
+d_sf_point3$decimalLongitude[1:76] <- -42.54716
+d_sf_point3$decimalLatitude[1:76] <- -19.66219
+
+plot(d_sf_poly)
+plot(bhrd, add = TRUE)
+points(d_sf_point3$decimalLongitude, d_sf_point3$decimalLatitude, col = "red", cex = .5)
+
+# Exclude records from v_total_join that are in the d_sf_point3 df to not generate duplicates records
+d_sf_point_exc <- v_total_join %>%
+  filter(!v_total_join$gbifID %in% d_sf_point3$gbifID)
+
+# Join dataframes
+names(d_sf_point_exc)
+names(d_sf_point3) # Table with coordinates corrected. Names of both table are the same
+d_total_join <- rbind(d_sf_point_exc, d_sf_point3) #join
+
+#Comapare original and final tables. Same number of rows
+nrow(v_total_join)
+nrow(d_total_join)
+
+plot(bhrd)
+points(d_total_join$decimalLongitude, d_total_join$decimalLatitude, col = "red", cex = .5)
+plot(d_sf_poly, add = TRUE)
+
+write.csv(d_total_join, "./results/spp_gbif_bhrd_clean.csv")
+
+
+# SAVE SHP ---------------------------------------------------------------------
+# Save shp points of occurrences === I think it's better to convert the spp_gbif_bhrd_clean.csv to a shapefile in QGis because the names of columns are not abreviated.
+
+# Transform sf to dataframe
+final_table <- as.data.frame(d_total_join)
+final_table <- final_table[-c(15)] # exclude column geometry
+
+## Converting data.frame into a SpatialPointsDataFrame
+### note that the lon and lat columns are in columns 3 and 4
+### Get long and lat from your data.frame. Make sure that the order is in lon/lat.
+latlon <- final_table[,c(3, 4)]
+
+### convert
+final_shp <- SpatialPointsDataFrame(coords = latlon, 
+                                  data = final_table,
+                                  proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+plot(final_shp)
 
 writeOGR(final_shp, "./SIG", 
          "spp_gbif_bhrd_clean", driver="ESRI Shapefile", overwrite_layer = TRUE)
-
-
-
-
-
-
-
 
