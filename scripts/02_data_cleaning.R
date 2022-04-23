@@ -33,10 +33,11 @@ names(spp.gbif.table) #a lot of columns
 spp.gbif.table <- spp.gbif.table %>%
   dplyr::select(species, countryCode, stateProvince, locality, decimalLongitude, decimalLatitude, individualCount, gbifID, family, taxonRank, coordinateUncertaintyInMeters, year, basisOfRecord, institutionCode, collectionCode)
 
-# remove records without coordinates 
+# remove records without coordinates and without locality information (white spaces)
 spp.gbif.table <- spp.gbif.table %>%
   filter(!is.na(decimalLongitude)) %>%
-  filter(!is.na(decimalLatitude))
+  filter(!is.na(decimalLatitude)) %>% 
+  filter(trimws(locality) !="") # need to change white spaces to blank space and then remove them
 
 
 # FLAG PROBLEMATIC RECORDS -----------------------------------------------------
@@ -100,7 +101,7 @@ dim(data_clean_T)
 names(data_clean_T)
 
 ## to write the new table
-write.csv(data_clean_T, "./results/species_gbif_Brasil_clean.csv")
+write.csv(data_clean_T, "./results/spp_gbif_Brasil_clean.csv")
 
 
 ## TRANSFORM POINTS TO SPATIAL DATA --------------------------------------------
@@ -111,7 +112,7 @@ bhrd <- readOGR("./data/bhrd_wgs84.shp") #loading shapefile
 proj4string(bhrd)
 
 # Transform csv in shp for spatial manipulation
-data <- read.csv("./results/species_gbif_Brasil_clean.csv", 
+data <- read.csv("./results/spp_gbif_Brasil_clean.csv", 
                header = T, sep=",", dec=".",
                encoding="utf-8")
 # If above does not work use this:
@@ -145,12 +146,12 @@ plot(bhrd)
 points(spp.shp.bhrd$decimalLongitude, spp.shp.bhrd$decimalLatitude, col = "red", cex = .1)
 
 # Save table of species for BHRD
-write.csv(spp.shp.bhrd, "./results/species_gbif_bhrd_clean.csv")
+write.csv(spp.shp.bhrd, "./results/spp_gbif_bhrd.csv")
 
 
 # CORRECT SPECIFIC POINTS FALLING IN THE WRONG PLACE  --------------------------
 # Load csv data
-dat_bhrd <- read.csv("./results/species_gbif_bhrd_clean.csv", 
+dat_bhrd <- read.csv("./results/spp_gbif_bhrd.csv", 
                      header = T, sep=",", dec=".",
                      encoding="utf-8")
 names(dat_bhrd)
@@ -158,7 +159,7 @@ names(dat_bhrd)
 # Delete records for Reserva Biológica de Sooretama, Reserva Biológica de Comboios, Pontal do Ipiranga. Coordinates are wrong and these places are not inside our study area.
 dat_bhrd1 <- dat_bhrd %>%
   filter(!str_detect(locality, 
-                    regex("Sooretama|Comboios|Pontal do Ipiranga", 
+                    regex("Sooretama|Comboios|Comboio|Pontal do Ipiranga|Ponta do Ipiranga", 
                           ignore_case = TRUE))
   )
 
@@ -199,7 +200,7 @@ names(sf_point_or)
 # Select records designed as Reserva Natural Vale, with and without coordinates errors
 v_sf_point <- sf_point_or %>%
   filter(str_detect(locality, 
-                    regex("Reserva Natural Vale|Reserva Natural de CVRD|Reserva Florestal da CVRD|Reserva Floresta da CVRD|Reserva Natural da Vale|Reserva Florestal CVRD|Reserva Florestal de CVRD|Reserva Natural de CVRD|Reserva Florestal do CVRD|Reserva da Vale|Reserva da CVRD|Reserva Natural da CVRD|Forest Reserve Companhia Vale do Rio Doce|Res. Fl. da CVRD|Res. Fl. CVRD|Reserva Florestal de Linhares|Reserva Florestal do Linhares|Reserva Florestal Linhares|Reserva F. Linhares|Reserva Florestal da Cia. Vale|Res. Flor. Linhares. CVRD|Reserva Florestal Vale do Rio Doce|Reserva da Companhia Vale do Rio Doce|Reserva Floresta da CVRD|Reserva Floresta da C.V.R.D.|Reserva Florestal, C.V.R.D.|Reserva Florestal, CVRD", 
+                    regex("Reserva Natural Vale|Reserva Natural de CVRD|Reserva da Natural do Vale do Rio|Reserva da Natural da Companhia Vale do Rio|Reserva Florestal da CVRD|Reseva Florestal da CVRD|Reserve Florestal da CVRD|Reserva Floresta da CVRD|Reserva Natural da Vale|Reserva Florestal CVRD|Reserva Florestal de CVRD|Reserva Natural de CVRD|Reserva Florestal do CVRD|Reserva da Vale|Reserva da CVRD|Reserva Natural da CVRD|Forest Reserve Companhia Vale do Rio Doce|Linhares. Forest Reserve. Companhia Vale do Rio Doce|Res. Fl. da CVRD|Res. Fl. CVRD|Reserva Florestal de Linhares|Reserva Florestal do Linhares|Reserva Florestal Linhares|Reserva F. Linhares|Reserva Florestal da Cia. Vale|Reserva Florestal da Companhia Vale do Rio Doce|Res. Flor. Linhares. CVRD|Reserva Florestal Vale do Rio Doce|Reserva da Companhia Vale do Rio Doce|Reserva Floresta da CVRD|Reserva Floresta da C.V.R.D.|Reserva Florestal, C.V.R.D.|Reserva Florestal, CVRD|Linhares Vale do rio Doce|Res. Fl. Linhares|Reserva da Companhia Vale do Ri Doce|Reserva Vale|Estrada do Flamengo, Km 1. Reserva Vale|Reserva do Vale de Rio Doce|Reserva da Campanhia Vale do Rio Doce|Reserva da Compania Vale do Rio Doce|Reserva Florestal de Linahres|Reserva Nat. Vale", 
                           ignore_case = TRUE))
   )
 
@@ -222,8 +223,8 @@ names(v_sf_point3)
 
 # Designate correct coordinates for Reserva Natural Vale
 #-39.95583,-19.23365 lon/lat
-v_sf_point3$decimalLongitude[1:747] <- -39.95583
-v_sf_point3$decimalLatitude[1:747] <- -19.23365
+v_sf_point3$decimalLongitude[1:783] <- -39.95583
+v_sf_point3$decimalLatitude[1:783] <- -19.23365
 
 plot(v_sf_poly)
 plot(bhrd, add = TRUE)
