@@ -8,10 +8,14 @@
 ###                     updated:                                             ###
 ################################################################################
 
+
+# Source of raw data in:
+# https://drive.google.com/drive/folders/19-U3KsGCN92vrBftjDdYWGfOtHwFSLsM?usp=sharing
+
 # SET UP LIBRARIES AND DATA ----------------------------------------------------
 library(rgdal)
 library(raster)
-# library(tidyverse) #for data manipulation
+library(tidyverse) #for data manipulation
 library(ggplot2) #to make graphs
 
 
@@ -46,7 +50,7 @@ for(i in 1:nrow(grid)){ #initate a loop for each cell grid
   msk <- mask(crp,tmp) #mask out values outside of grids
   tbl <- data.frame(freq(msk)) #get the count of vegetation pixels 
   tbl <- tbl[!is.na(tbl$value), ] #remove NA values
-  tbl$ha <- tbl$count*0.09 #add in a ha column for extra info
+  tbl$ha <- tbl$count*0.09 #add in a ha column for extra info. Each grid is an 30 x 30 meters of area
   tbl$grid <- tmp$grid #add in grid information as a column 
   jj <- rbind(jj,tbl) #add rows to dataframe jj
   
